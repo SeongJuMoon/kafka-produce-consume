@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
+	"strings"
 
 	kClient "github.com/Shopify/sarama"
 )
@@ -13,13 +15,12 @@ type Producer struct {
 	MessageProducer kClient.SyncProducer
 }
 
-func NewProducer() *Producer {
+func NewProducer(brokers []string) *Producer {
 	config := kClient.NewConfig()
 	config.Producer.Partitioner = kClient.NewRandomPartitioner
 	config.Producer.RequiredAcks = kClient.WaitForAll
 	config.Producer.Return.Successes = true
-	c, err := kClient.NewSyncProducer([]string{
-		"localhost:9092"}, config)
+	c, err := kClient.NewSyncProducer(brokers, config)
 
 	if err != nil {
 		panic(err)
@@ -51,8 +52,11 @@ func (p *Producer) SendStringData(message string, topic string) error {
 }
 
 func main() {
-	producer := NewProducer()
 	reader := bufio.NewReader(os.Stdin)
+	brokerURLs := os.Getenv("kafka_url")
+	brokers := strings.Split(brokerURLs, ",")
+	kClient.Logger = log.New(os.Stdout, "[kafka client] ", log.LstdFlags)
+	producer := NewProducer(brokers)
 
 	for {
 		fmt.Print("> ")
